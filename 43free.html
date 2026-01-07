@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>MINGFLIX - AEGIS ARCHIVE</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;500;700;900&display=swap');
+
+        :root {
+            --netflix-red: #E50914;
+            --bg-black: #141414;
+            --card-glow: rgba(229, 9, 20, 0.8);
+            --modal-bg: #181818;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        body {
+            background-color: var(--bg-black);
+            color: white;
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* --- 로딩 화면 --- */
+        #boot-layer {
+            position: fixed; inset: 0; background: #000; z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+            transition: opacity 0.8s ease;
+            cursor: pointer;
+        }
+        .netflix-intro {
+            font-size: 5rem; font-weight: 900; color: var(--netflix-red);
+            letter-spacing: -5px; animation: intro-zoom 1.5s forwards;
+            font-family: 'Arial Black', sans-serif;
+            text-shadow: 0 0 20px rgba(229, 9, 20, 0.5);
+        }
+        @keyframes intro-zoom {
+            0% { transform: scale(0.5); opacity: 0; filter: blur(10px); }
+            50% { transform: scale(1.1); opacity: 1; filter: blur(0px); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* --- 네비게이션 --- */
+        .navbar {
+            position: fixed; top: 0; width: 100%; height: 68px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            display: flex; align-items: center; padding: 0 4%; z-index: 1000;
+        }
+        .logo { color: var(--netflix-red); font-size: 1.8rem; font-weight: 900; margin-right: 25px; text-decoration: none; cursor: pointer; }
+        
+        .nav-links { display: flex; list-style: none; gap: 20px; font-size: 0.95rem; padding: 0; color: #e5e5e5; }
+        .nav-links li { cursor: pointer; transition: color 0.3s; font-weight: 500; }
+        .nav-links li:hover { color: #b3b3b3; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
+
+        /* --- 히어로 섹션 --- */
+        .hero {
+            height: 85vh; padding: 0 4%; display: flex; align-items: center;
+            background: linear-gradient(to right, #141414 10%, transparent 100%), 
+                        linear-gradient(to bottom, transparent 80%, #141414 100%),
+                        url('https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop'); 
+            background-size: cover; background-position: center;
+        }
+        .hero-content { max-width: 650px; z-index: 2; }
+        .hero-title { font-size: 4.5rem; font-weight: 900; margin: 10px 0; letter-spacing: -2px; line-height: 1.1; }
+        .hero-desc { font-size: 1.2rem; line-height: 1.5; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); margin-bottom: 20px; color: #fff; }
+        
+        .btn-group { display: flex; gap: 12px; }
+        .btn {
+            padding: 10px 25px; border-radius: 4px; font-weight: 700; font-size: 1.1rem;
+            cursor: pointer; border: none; display: flex; align-items: center; gap: 10px;
+        }
+        .btn-play { background: white; color: black; }
+        .btn-info { background: rgba(109, 109, 110, 0.7); color: white; }
+
+        /* --- 캐릭터 카드 --- */
+        .content-row { padding: 40px 4%; margin-top: -120px; position: relative; z-index: 10; }
+        .card-container { display: flex; gap: 12px; }
+        .operator-card {
+            flex: 1; height: 350px; border-radius: 4px; overflow: hidden;
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            position: relative; border: 2px solid transparent; background: #2f2f2f;
+        }
+        .operator-card:hover {
+            transform: scale(1.15) translateY(-20px);
+            z-index: 100;
+            border-color: #fff;
+            box-shadow: 0 0 30px var(--card-glow);
+        }
+        .operator-card img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+        .operator-card:hover img { transform: scale(1.1); }
+        
+        .card-name {
+            position: absolute; bottom: 0; width: 100%; padding: 15px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.95));
+            font-weight: bold; font-size: 1.2rem; text-align: center;
+        }
+
+        /* --- 통합 모달 창 --- */
+        #archive-modal {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+            z-index: 2000; overflow-y: auto; padding: 60px 0; backdrop-filter: blur(8px);
+        }
+        .archive-container {
+            width: 90%; max-width: 1000px; margin: auto; background: var(--modal-bg);
+            border-radius: 10px; display: flex; overflow: hidden; 
+            box-shadow: 0 0 50px rgba(0,0,0,0.7); position: relative;
+        }
+        .archive-aside { flex: 0 0 450px; min-height: 600px; }
+        .archive-aside img { width: 100%; height: 100%; object-fit: cover; }
+        .archive-main { flex: 1; padding: 45px; position: relative; color: #fff; }
+        
+        .close-btn { 
+            position: absolute; top: 15px; right: 20px; width: 36px; height: 36px;
+            border-radius: 50%; background: #181818; border: 2px solid white;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 20px; cursor: pointer; z-index: 10;
+        }
+        .close-btn:hover { background: white; color: black; }
+        
+        /* 텍스트 연산 효과를 위한 스타일 */
+        .scramble-text { font-family: 'monospace'; }
+
+        .data-sector { margin-bottom: 15px; border: 1px solid #404040; border-radius: 4px; background: #2f2f2f; }
+        .sector-title { padding: 15px 20px; cursor: pointer; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .sector-title:hover { background: #3e3e3e; }
+        .sector-content { display: none; padding: 20px; line-height: 1.8; color: #d2d2d2; border-top: 1px solid #404040; font-size: 0.95rem; }
+
+        .tag-pill {
+            border: 1px solid #666; padding: 4px 8px; margin-right: 5px; 
+            font-size: 12px; color: #ccc; border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="boot-layer">
+    <div class="netflix-intro">MINGFLIX</div>
+</div>
+
+<nav class="navbar">
+    <a href="#" class="logo" onclick="window.location.reload()">MINGFLIX</a>
+    <ul class="nav-links">
+        <li onclick="openNav('world')" onmouseenter="playHoverSound()">세계소개</li>
+        <li onclick="openNav('squad')" onmouseenter="playHoverSound()">캐릭터소개</li>
+        <li onclick="openNav('monsters')" onmouseenter="playHoverSound()">몬스터목록</li>
+        <li>팔로워눌러주세요..</li>
+    </ul>
+</nav>
+
+<header class="hero">
+    <div class="hero-content">
+        <div style="color:var(--netflix-red); font-weight:900; letter-spacing:2px; margin-bottom:5px;">SERIES</div>
+        <h1 class="hero-title">기묘한밍야기</h1>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; font-weight:bold;">
+            <span style="background:var(--netflix-red); padding:2px 5px; border-radius:2px; font-size:0.8rem;">TOP 10</span>
+            <span style="font-weight:bold;">오늘 시리즈 순위 1위</span>
+        </div>
+        <p class="hero-desc">
+            2025년, 서울 상공에 발생한 거대한 '워프 게이트'로 인해 차원이 융합되었습니다. 
+            이지스(AEGIS) 특수 대응팀은 인류를 위협하는 이종족과 맞서 싸우며, 
+            실종된 소녀 밍 바이어스를 찾기 위한 위험한 여정을 시작합니다.
+        </p>
+        <div class="btn-group">
+            <button class="btn btn-play">▶ 재생</button>
+            <button class="btn btn-info">ⓘ 상세 정보</button>
+        </div>
+    </div>
+</header>
+
+<div class="content-row">
+    <h2 style="margin-bottom:15px; font-weight:700; font-size:1.5rem;">이지스(AEGIS) 정예 대원</h2>
+    <div class="card-container">
+        <div class="operator-card" onmouseenter="playHoverSound()" onclick="openArchive('elise')">
+            <img src="https://placehold.co/400x600/0078d4/fff?text=ELISE">
+            <div class="card-name">엘리즈</div>
+        </div>
+        <div class="operator-card" onmouseenter="playHoverSound()" onclick="openArchive('vlad')">
+            <img src="https://placehold.co/400x600/e74c3c/fff?text=VLAD">
+            <div class="card-name">블라드</div>
+        </div>
+        <div class="operator-card" onmouseenter="playHoverSound()" onclick="openArchive('seraphina')">
+            <img src="https://placehold.co/400x600/3498db/fff?text=SERAPHINA">
+            <div class="card-name">세라피나</div>
+        </div>
+        <div class="operator-card" onmouseenter="playHoverSound()" onclick="openArchive('jax')">
+            <img src="https://placehold.co/400x600/27ae60/fff?text=JAX">
+            <div class="card-name">잭스</div>
+        </div>
+        <div class="operator-card" onmouseenter="playHoverSound()" onclick="openArchive('mia')">
+            <img src="https://placehold.co/400x600/f1c40f/fff?text=MIA">
+            <div class="card-name">미아</div>
+        </div>
+    </div>
+</div>
+
+<div id="archive-modal">
+    <div class="archive-container">
+        <div id="archive-aside" class="archive-aside"></div>
+        <div class="archive-main">
+            <div class="close-btn" onclick="closeArchive()">×</div>
+            <div id="archive-content"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function initAudio() { if (audioCtx.state === 'suspended') audioCtx.resume(); }
+    function playHoverSound() {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(320, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+    }
+    document.body.addEventListener('click', initAudio);
+
+    /* --- 텍스트 스크램블(연산) 효과 클래스 --- */
+    class TextScrambler {
+        constructor(el) {
+            this.el = el;
+            this.chars = '!<>-_\\/[]{}—=+*^?#________1234567890ABCDEF';
+            this.update = this.update.bind(this);
+        }
+        setText(newText) {
+            const oldText = this.el.innerText;
+            const length = Math.max(oldText.length, newText.length);
+            const promise = new Promise((resolve) => (this.resolve = resolve));
+            this.queue = [];
+            for (let i = 0; i < length; i++) {
+                const from = oldText[i] || '';
+                const to = newText[i] || '';
+                const start = Math.floor(Math.random() * 40);
+                const end = start + Math.floor(Math.random() * 40);
+                this.queue.push({ from, to, start, end });
+            }
+            cancelAnimationFrame(this.frameRequest);
+            this.frame = 0;
+            this.update();
+            return promise;
+        }
+        update() {
+            let output = '';
+            let complete = 0;
+            for (let i = 0, n = this.queue.length; i < n; i++) {
+                let { from, to, start, end, char } = this.queue[i];
+                if (this.frame >= end) {
+                    complete++;
+                    output += to;
+                } else if (this.frame >= start) {
+                    if (!char || Math.random() < 0.28) {
+                        char = this.randomChar();
+                        this.queue[i].char = char;
+                    }
+                    // 연산 중인 글자 색상을 흰색(#FFF)으로 변경
+                    output += `<span style="color:#FFF;">${char}</span>`;
+                } else {
+                    output += from;
+                }
+            }
+            this.el.innerHTML = output;
+            if (complete === this.queue.length) {
+                this.resolve();
+            } else {
+                this.frameRequest = requestAnimationFrame(this.update);
+                this.frame++;
+            }
+        }
+        randomChar() {
+            return this.chars[Math.floor(Math.random() * this.chars.length)];
+        }
+    }
+
+    const charData = {
+        elise: {
+            name: "엘리즈 드 보부아르", match: "98% 일치", tags: ["냉기", "원거리", "귀족"],
+            img: "https://placehold.co/600x900/0078d4/fff?text=ELISE",
+            sectors: [
+                {t: "배경 (Background)", c: "보부아르 연구소의 영애였으나, 차원 붕괴 실험으로 가족을 잃고 '절대영도'의 권능을 각성했습니다."},
+                {t: "전술 능력 (Ability)", c: "빙정 강화 외골격으로 주변 수분을 즉각 얼려 무기화합니다."},
+                {t: "지휘관 리포트 (Remarks)", c: "지휘관에게만 동기화율 92%를 보이며, 질투 시 주변 온도가 영하 20도까지 하락합니다."}
+            ]
+        },
+        vlad: {
+            name: "블라드 폰 크로울리", match: "96% 일치", tags: ["흡혈", "암살", "광기"],
+            img: "https://placehold.co/600x900/e74c3c/fff?text=VLAD",
+            sectors: [
+                {t: "배경 (Background)", c: "혈액 강화 수술의 생존자이자 몰락한 귀족입니다."},
+                {t: "전술 능력 (Ability)", c: "자신의 피를 나노 단위로 조작하여 무기를 만듭니다."},
+                {t: "지휘관 리포트 (Remarks)", c: "심각한 결벽증이 있으나 지휘관에게는 맹목적인 충성을 바칩니다."}
+            ]
+        },
+        seraphina: {
+            name: "세라피나", match: "99% 일치", tags: ["해킹", "AI", "서포트"],
+            img: "https://placehold.co/600x900/3498db/fff?text=SERAPHINA",
+            sectors: [
+                {t: "배경 (Background)", c: "인간의 뇌와 기계를 융합한 하이브리드 지성체입니다."},
+                {t: "전술 능력 (Ability)", c: "6개의 비트로 전장의 모든 네트워크를 해킹하고 통제합니다."},
+                {t: "지휘관 리포트 (Remarks)", c: "지휘관의 웃음소리에 시스템 과부하를 느끼는 오류가 있습니다."}
+            ]
+        },
+        jax: {
+            name: "잭스", match: "95% 일치", tags: ["탱커", "중화기", "베테랑"],
+            img: "https://placehold.co/600x900/27ae60/fff?text=JAX",
+            sectors: [
+                {t: "배경 (Background)", c: "30년 경력의 용병. 전신을 기계화하여 인간의 한계를 넘었습니다."},
+                {t: "전술 능력 (Ability)", c: "80mm 전술 레일건을 자유자재로 다루며 아군을 보호합니다."},
+                {t: "지휘관 리포트 (Remarks)", c: "지휘관을 과거의 동료들과 겹쳐 보며 절대적인 보호 의지를 보입니다."}
+            ]
+        },
+        mia: {
+            name: "미아", match: "NEW", tags: ["시간조작", "기습", "미스터리"],
+            img: "https://placehold.co/600x900/f1c40f/fff?text=MIA",
+            sectors: [
+                {t: "배경 (Background)", c: "차원 틈새에서 태어난 '타임 차일드'입니다."},
+                {t: "전술 능력 (Ability)", c: "0.5초 뒤의 미래를 보고 시공간을 왜곡하여 이동합니다."},
+                {t: "지휘관 리포트 (Remarks)", c: "지휘관을 '닻(Anchor)'이라 부르며 곁에 있을 때 안정을 느낍니다."}
+            ]
+        }
+    };
+
+    const navData = {
+        world: {
+            name: "대균열 (The Great Rift)", match: "위험도: 극상", tags: ["SF", "디스토피아", "차원융합"],
+            img: "https://images.unsplash.com/photo-1480796927426-f609979314bd?q=80&w=1000&auto=format&fit=crop",
+            sectors: [
+                {t: "시놉시스 (Synopsis)", c: "2025년, 서울 상공에 웜홀이 열리며 이계의 차원과 지구가 융합되는 사태가 발생했습니다."},
+                {t: "위협 (Threat)", c: "균열 너머의 '보이드' 에너지는 생명체를 괴물로 변이시킵니다."},
+                {t: "현재 상황 (Status)", c: "서울의 40%가 오염 구역으로 지정되었습니다."}
+            ]
+        },
+        squad: {
+            name: "에이지스 (AEGIS)", match: "동기화율 100%", tags: ["특수부대", "초능력", "인류수호"],
+            img: "https://images.unsplash.com/photo-1595590424283-b8f17842773f?q=80&w=1000&auto=format&fit=crop",
+            sectors: [
+                {t: "조직 개요 (Overview)", c: "대균열 사태 이후 설립된 범국가적 초상현상 대응기관입니다."},
+                {t: "사령관 (Commander)", c: "플레이어(당신)는 에이지스 7지부의 지휘관으로 부임했습니다."}
+            ]
+        },
+        monsters: {
+            name: "이종족 도감 (Bestiary)", match: "식별 불가", tags: ["적대적", "괴수", "공포"],
+            img: "https://images.unsplash.com/photo-1519074069444-1ba4fff66d16?q=80&w=1000&auto=format&fit=crop",
+            sectors: [
+                {t: "보이드 워커 (Void Walker)", c: "가장 흔하게 발견되는 하급 괴수입니다."},
+                {t: "크림슨 아이 (Crimson Eye)", c: "공중에 부유하는 거대한 눈 형태의 감시형 괴수입니다."},
+                {t: "데모고르곤 (S-Class)", c: "현재까지 확인된 최상위 포식자입니다."}
+            ]
+        }
+    };
+
+    window.onload = () => {
+        setTimeout(() => {
+            const layer = document.getElementById('boot-layer');
+            layer.style.opacity = '0';
+            setTimeout(() => layer.style.display = 'none', 800);
+        }, 2000);
+    };
+
+    function showModal(data) {
+        playHoverSound();
+        document.getElementById('archive-aside').innerHTML = `<img src="${data.img}">`;
+        let tagsHtml = data.tags.map(tag => `<span class="tag-pill">${tag}</span>`).join('');
+        let sectorsHtml = data.sectors.map(s => `
+            <div class="data-sector">
+                <div class="sector-title" onclick="toggleSector(this)">${s.t} <span>▼</span></div>
+                <div class="sector-content">${s.c}</div>
+            </div>
+        `).join('');
+        
+        document.getElementById('archive-content').innerHTML = `
+            <h1 id="scramble-target" class="scramble-text" style="font-size:2.8rem; margin-bottom:10px; line-height:1.2; min-height:1.2em;"></h1>
+            <div style="margin-bottom:20px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <span style="color:#46d369; font-weight:bold;">${data.match}</span>
+                ${tagsHtml}
+            </div>
+            ${sectorsHtml}
+        `;
+        document.getElementById('archive-modal').style.display = "block";
+        document.body.style.overflow = "hidden";
+
+        const target = document.getElementById('scramble-target');
+        const scrambler = new TextScrambler(target);
+        scrambler.setText(data.name);
+    }
+
+    function openArchive(id) { if(charData[id]) showModal(charData[id]); }
+    function openNav(key) { if(navData[key]) showModal(navData[key]); }
+    function closeArchive() {
+        document.getElementById('archive-modal').style.display = "none";
+        document.body.style.overflow = "auto";
+    }
+
+    function toggleSector(el) {
+        const content = el.nextElementSibling;
+        const arrow = el.querySelector('span');
+        if(content.style.display === "block") {
+            content.style.display = "none";
+            arrow.innerText = "▼";
+        } else {
+            content.style.display = "block";
+            arrow.innerText = "▲";
+        }
+    }
+
+    window.onclick = function(event) {
+        const modal = document.getElementById('archive-modal');
+        if (event.target == document.querySelector('.archive-container') || event.target == modal) {
+            closeArchive();
+        }
+    }
+</script>
+
+</body>
+</html>
